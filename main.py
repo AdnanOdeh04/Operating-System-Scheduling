@@ -1,1 +1,1 @@
-print("Alaa is piece of shit")
+print("adnan is piece of shit")
