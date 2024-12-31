@@ -29,12 +29,23 @@ class Data:
             x = re.search(r"{.*}", i)
             val = list(x.span())
             new = (i[val[0] + 1:val[1] - 1]).split(",")
-            list_total_Bursts = [c for c in new if c.isdigit()]
+            ListBursts = []
+            #  list_total_Bursts = [c for c in new if c.isdigit()]
             npList = np.array(list_total_Bursts, dtype=int)
-            sum = np.sum(npList)
+            #  sum = np.sum(npList)
             y = re.search(r".*{", i)
             valType = list(y.span())
             Type = i[valType[0]:valType[1] - 1]
+            print(Type)
+            while len(new) != 0:
+                if len(ListBursts) != 0 and str(ListBursts[-1]).isdigit() and str(new[0]).isdigit():
+                    ListBursts[-1] += int(new[0])
+                else:
+                    if new[0].isdigit():
+                        ListBursts.append(int(new[0]))
+                    else:
+                        ListBursts.append(new[0])
+                new.pop(0)
 
-            list_all_Bursts.append([Type,int(sum)])
+            list_all_Bursts.append([Type, ListBursts])
         return list_all_Bursts
