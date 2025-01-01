@@ -13,8 +13,10 @@ for index, row in data.iterrows():
     #print(f"{row['PID']}, {row['Arrival Time']}, {row['Priority']}, {row['Sequence of CPU and IO bursts']}")
     #print(data_in_dictionary[row['PID']].calculate_total_burst())
 
-
+graph_processes = {}    #{"PID":[processes or resources]} all p or r in the list are connected directly to the process PID
+assigned_list = []
 ready = {}
+ready_res = {}
 running = []
 waiting = []
 time = 0
@@ -25,6 +27,7 @@ turnaround_time = []
 number_process = 0
 new = [i for i in data_in_dictionary.keys()]
 rosources_list = []
+resource_busy=0
 test = 0
 while True:
     for i in range(len(new)):
@@ -39,13 +42,18 @@ while True:
             number_process += 1
 
     if len(ready) != 0:
+        resource_busy = 0
         process = min(ready.keys())
         worker = ready[process].popleft()
+        #Here when a new process comes insert it to the graph
+        if worker[0] not in graph_processes.keys():
+            graph_processes[str(worker[0])] = []
+        testRequestFirst = re.search(r"R\[[0-9]*\]",str(worker[1][0][1][0]))
+        testFreeFirst = re.search(r"F\[[0-9]*\]", str(worker[1][0][1][0]))
         if str(worker[1][0][1][0]).isdigit():
             if int(worker[1][0][1][0]) <= time_q:
                 start_time = time
                 time = time + int(worker[1][0][1][0])
-                gantt.append([start_time, worker[0], time])
                 for i in waiting_time:
                     if i[0] != worker[0] and all(w[0] != i[0] for w in waiting):
                         for priority in ready.values():
@@ -56,27 +64,89 @@ while True:
                 worker[1][0][1][0] = 0
                 worker[1][0][1].pop(0)
                 if len(worker[1][0][1]) == 0:
-                    worker[1][0].pop(0)
+                    worker[1].pop(0)
                 else:
-                    testRequest = re.search(r"R\[[0-9]*\]",worker[1][0][1][0])
-                    testFree = re.search(r"F\[[0-9]*\]", worker[1][0][1][0])
-                    if testRequest:
-                        worker[1][0][1].pop(0)
-                        if left_value > 0:
+                    while True:
+                        testRequest = re.search(r"R\[[0-9]*\]",worker[1][0][1][0])
+                        testFree = re.search(r"F\[[0-9]*\]", worker[1][0][1][0])
+                        if testRequest:
+                            #make the Request
+                            if worker[1][0][1][0] not in assigned_list:
+                                graph_processes[str(worker[1][0][1][0])] = []
+                                graph_processes[str(worker[1][0][1][0])].append(str(worker[0]))
+                                worker[1][0][1].pop(0)
+                            else:
+                                graph_processes[str(worker[0])].append(str(worker[1][0][1][0]))
+                                ready[process].append([worker[0],worker[1]])
+                                resource_busy = 1
+                                break
 
-                    elif testFree:
-                        pass
-                    else:
-                        print("Error in the File")
-                        exit()
-
-
-                if len(worker[1][0]) > 0:
+                            if len(worker[1][0][1]) == 0:
+                                worker[1].pop(0)
+                                break
+                            if left_value == 0 and str(worker[1][0][1][0]).isdigit():
+                                break
+                            elif left_value > 0 and len(worker[1][0][1]) > 0:
+                                if str(worker[1][0][1][0]).isdigit():
+                                    if int(worker[1][0][1][0]) <= left_value:
+                                        time = time+worker[1][0][1][0]
+                                        left_value = left_value-worker[1][0][1][0]
+                                        worker[1][0][1].pop(0)
+                                        if len(worker[1][0][1]) == 0:
+                                            worker[1].pop(0)
+                                        if left_value == 0 and str(worker[1][0][1][0]).isdigit():
+                                            break
+                                    else:
+                                        time = time+left_value
+                                        worker[1][0][1][0] = worker[1][0][1][0]-left_value
+                                        left_value = 0
+                                        break
+                        elif testFree:
+                            #make the free
+                            #to search whether the resources to be freed is already allocated or not
+                            Form_resource_to_be_freed = "R[" + worker[1][0][1][0][2] + "]"
+                            if Form_resource_to_be_freed in assigned_list:
+                                #remove the resource from the graph
+                                del graph_processes[str(Form_resource_to_be_freed)]
+                                assigned_list.remove(Form_resource_to_be_freed)
+                            else:
+                                print("Free for a resource not exit!")
+                                exit(0)
+                            worker[1][0][1].pop(0)
+                            if len(worker[1][0][1]) == 0:
+                                worker[1].pop(0)
+                                break
+                            if left_value == 0 and str(worker[1][0][1][0]).isdigit():
+                                break
+                            elif left_value > 0 and len(worker[1][0][1]) > 0:
+                                if str(worker[1][0][1][0]).isdigit():
+                                    if int(worker[1][0][1][0]) <= left_value:
+                                        time = time+worker[1][0][1][0]
+                                        left_value = left_value-worker[1][0][1][0]
+                                        worker[1][0][1].pop(0)
+                                        if left_value == 0 and str(worker[1][0][1][0]).isdigit():
+                                            break
+                                    else:
+                                        time = time+left_value
+                                        worker[1][0][1][0] = worker[1][0][1][0]-left_value
+                                        left_value = 0
+                                        break
+                        else:
+                            print("Error in the File")
+                            exit()
+                if resource_busy == 1:
+                    continue
+                gantt.append([start_time, worker[0], time])
+                if len(worker[1]) > 0:
                     if worker[1][0][0] == "IO":
                         waiting.append([worker[0], worker[1], process, int(worker[1][0][1][0]) + time])
                         worker[1].pop(0)
+                        if len(worker[1][0][1]) == 0:
+                            worker[1].pop(0)
                         if len(worker[1]) > 0:
                             worker[1] = []
+                    else:
+                        ready[process].append(worker)
                 if len(ready[process]) == 0 and len(worker[1]) == 0:
                     ready.pop(process)
 
@@ -91,6 +161,112 @@ while True:
                 worker[1][0][1][0] = int(worker[1][0][1][0]) - time_q
                 ready[process].append(worker)
                 gantt.append([start_time, worker[0], time])
+
+
+        elif testRequestFirst or testFreeFirst:
+            #make the Request
+            #here we call a function for an allocation for the allocation of the Graoh (For DeadLock Detection)
+            if testRequestFirst:
+                if str(worker[1][0][1][0]) not in assigned_list:
+                    graph_processes[str(worker[1][0][1][0])] = []
+                    graph_processes[str(worker[1][0][1][0])].append(str(worker[0]))
+                else:
+                    graph_processes[str(worker[0])].append(str(worker[1][0][1][0]))
+                    continue
+            elif testFreeFirst:
+                Form_resource_to_be_freed = "R[" + worker[1][0][1][0][2] + "]"
+                if Form_resource_to_be_freed in assigned_list:
+                    # remove the resource from the graph
+                    del graph_processes[str(Form_resource_to_be_freed)]
+                    assigned_list.remove(Form_resource_to_be_freed)
+                else:
+                    print("Free for a resource not exit!")
+                    exit(0)
+            worker[1][0][1].pop(0)
+            start_time=time
+            if len(worker[1][0][1]) == 0:
+                worker[1].pop(0)
+                break
+            while True:
+                left_value = time_q
+                testRequest = re.search(r"R\[[0-9]*\]",str(worker[1][0][1][0]))
+                testFree = re.search(r"F\[[0-9]*\]", str(worker[1][0][1][0]))
+                if testRequest:
+                    #make the Request
+                    worker[1][0][1].pop(0)
+                    if left_value == 0 and str(worker[1][0][1][0]).isdigit():
+                        break
+                    elif left_value > 0 and len(worker[1][0][1]) > 0:
+                        if str(worker[1][0][1][0]).isdigit():
+                            if int(worker[1][0][1][0]) <= left_value:
+                                time = time+worker[1][0][1][0]
+                                left_value = left_value-worker[1][0][1][0]
+                                worker[1][0][1].pop(0)
+                                if left_value == 0 and str(worker[1][0][1][0]).isdigit():
+                                    break
+                            else:
+                                time = time+left_value
+                                worker[1][0][1][0] = worker[1][0][1][0]-left_value
+                                left_value = 0
+                                break
+                elif testFree:
+                    #make the free
+                    worker[1][0][1].pop(0)
+                    if left_value == 0 and str(worker[1][0][1][0]).isdigit():
+                        break
+                    elif left_value > 0 and len(worker[1][0][1]) > 0:
+                        if str(worker[1][0][1][0]).isdigit():
+                            if int(worker[1][0][1][0]) <= left_value:
+                                time = time+worker[1][0][1][0]
+                                left_value = left_value-worker[1][0][1][0]
+                                worker[1][0][1].pop(0)
+                                for i in waiting_time:
+                                    if i[0] != worker[0] and all(w[0] != i[0] for w in waiting):
+                                        for priority in ready.values():
+                                            if any(proc[0] == i[0] for proc in priority):
+                                                i[1] += worker[1][0][1][0]
+                                if left_value == 0 and str(worker[1][0][1][0]).isdigit():
+                                    break
+                            else:
+                                time = time+left_value
+                                worker[1][0][1][0] = worker[1][0][1][0]-left_value
+                                for i in waiting_time:
+                                    if i[0] != worker[0] and all(w[0] != i[0] for w in waiting):
+                                        for priority in ready.values():
+                                            if any(proc[0] == i[0] for proc in priority):
+                                                i[1] += left_value
+                                left_value = 0
+                                break
+                else:
+                    if left_value == 0 and str(worker[1][0][1][0]).isdigit():
+                        break
+                    elif left_value > 0 and len(worker[1][0][1]) > 0:
+                        if str(worker[1][0][1][0]).isdigit():
+                            if int(worker[1][0][1][0]) <= left_value:
+                                time = time+worker[1][0][1][0]
+                                left_value = left_value-worker[1][0][1][0]
+                                for i in waiting_time:
+                                    if i[0] != worker[0] and all(w[0] != i[0] for w in waiting):
+                                        for priority in ready.values():
+                                            if any(proc[0] == i[0] for proc in priority):
+                                                i[1] += worker[1][0][1][0]
+
+                                worker[1][0][1].pop(0)
+                                if left_value == 0 and str(worker[1][0][1][0]).isdigit():
+                                    break
+                            else:
+                                time = time+left_value
+                                worker[1][0][1][0] = worker[1][0][1][0]-left_value
+                                for i in waiting_time:
+                                    if i[0] != worker[0] and all(w[0] != i[0] for w in waiting):
+                                        for priority in ready.values():
+                                            if any(proc[0] == i[0] for proc in priority):
+                                                i[1] += left_value
+                                left_value = 0
+                                break
+
+            gantt.append([start_time, worker[0], time])
+            ready[process].append(worker)
 
     for i in waiting:
         if i[3] <= time:
@@ -107,3 +283,4 @@ while True:
 print(gantt)
 print(waiting_time)
 print(turnaround_time)
+print(graph_processes)

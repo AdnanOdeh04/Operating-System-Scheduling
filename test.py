@@ -36,7 +36,6 @@ class Data:
             y = re.search(r".*{", i)
             valType = list(y.span())
             Type = i[valType[0]:valType[1] - 1]
-            print(Type)
             while len(new) != 0:
                 if len(ListBursts) != 0 and str(ListBursts[-1]).isdigit() and str(new[0]).isdigit():
                     ListBursts[-1] += int(new[0])
