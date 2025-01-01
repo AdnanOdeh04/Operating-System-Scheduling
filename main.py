@@ -74,10 +74,11 @@ while True:
                             if worker[1][0][1][0] not in assigned_list:
                                 graph_processes[str(worker[1][0][1][0])] = []
                                 graph_processes[str(worker[1][0][1][0])].append(str(worker[0]))
+                                assigned_list.append(str(worker[1][0][1][0]))
                                 worker[1][0][1].pop(0)
                             else:
                                 graph_processes[str(worker[0])].append(str(worker[1][0][1][0]))
-                                ready[process].append([worker[0],worker[1]])
+                                ready_res[process].append([worker[0],worker[1]])
                                 resource_busy = 1
                                 break
 
@@ -170,8 +171,10 @@ while True:
                 if str(worker[1][0][1][0]) not in assigned_list:
                     graph_processes[str(worker[1][0][1][0])] = []
                     graph_processes[str(worker[1][0][1][0])].append(str(worker[0]))
+                    assigned_list.append(str(worker[1][0][1][0]))
                 else:
                     graph_processes[str(worker[0])].append(str(worker[1][0][1][0]))
+                    ready_res[process].append([worker[0], worker[1]])
                     continue
             elif testFreeFirst:
                 Form_resource_to_be_freed = "R[" + worker[1][0][1][0][2] + "]"
