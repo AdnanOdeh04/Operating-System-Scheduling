@@ -4,16 +4,16 @@ from collections import deque
 import re
 
 data = pd.read_csv("./data.csv", delimiter="|")
-#index here for the dataFrame (data) which is started with value zero to track all elements in the dataFrame
-#iterrow() to move through all rows in the data
+# index here for the dataFrame (data) which is started with value zero to track all elements in the dataFrame
+# iterrow() to move through all rows in the data
 data_in_dictionary = {}
 for index, row in data.iterrows():
     data_in_dictionary[row['PID']] = test.Data(row['PID'], row['Arrival Time'], row['Priority'],
                                                row['Sequence of CPU and IO bursts'])
-    #print(f"{row['PID']}, {row['Arrival Time']}, {row['Priority']}, {row['Sequence of CPU and IO bursts']}")
-    #print(data_in_dictionary[row['PID']].calculate_total_burst())
+    # print(f"{row['PID']}, {row['Arrival Time']}, {row['Priority']}, {row['Sequence of CPU and IO bursts']}")
+    # print(data_in_dictionary[row['PID']].calculate_total_burst())
 
-graph_processes = {}    #{"PID":[processes or resources]} all p or r in the list are connected directly to the process PID
+graph_processes = {}  # {"PID":[processes or resources]} all p or r in the list are connected directly to the process PID
 assigned_list = []
 ready = {}
 ready_res = {}
@@ -27,29 +27,96 @@ turnaround_time = []
 number_process = 0
 new = [i for i in data_in_dictionary.keys()]
 rosources_list = []
-resource_busy=0
-test = 0
-while True:
-    for i in range(len(new)):
-        if data_in_dictionary[new[i]].Arrival_Time <= time and data_in_dictionary[new[i]].Check == 0:
-            priority = data_in_dictionary[new[i]].Priority
-            if priority not in ready.keys():
-                ready[priority] = deque()
-            ready[priority].append([new[i], data_in_dictionary[new[i]].calculate_total_burst()])
-            data_in_dictionary[new[i]].Check = 1
-            waiting_time.append([new[i], time - data_in_dictionary[new[i]].Arrival_Time])
-            turnaround_time.append([new[i], 0])
-            number_process += 1
+resource_busy = 0
+finish_recovery = 0
+process_handle_deadlock = []
 
+
+def deadLockDetection(graph, TargetedProcess):
+    listProcesses = []
+    for vertex in graph.keys():
+        testProcess = re.search(r"^[0-9]*$", str(vertex))
+        if testProcess and vertex not in listProcesses:
+            listProcesses.append(str(vertex))
+        pointer = graph[vertex]
+        while pointer in graph.keys() and graph[pointer] not in listProcesses:
+            if pointer not in listProcesses and re.search(r"^[0-9]*$", str(pointer)):
+                listProcesses.append(pointer)
+            pointer = graph[pointer]
+        if pointer in graph.keys():
+            if graph[pointer] in listProcesses:
+                TargetedProcess.append(graph[pointer])
+                return True
+        else:
+            continue
+    return False
+
+
+def recovery(graph_processes, ready_res, assigned_list, process_to_handle_deadlock, finished_recovery):
+    print(graph_processes)
+    while deadLockDetection(graph_processes, process_to_handle_deadlock):
+        if graph_processes[str(process_to_handle_deadlock[0])] in ready_res.keys():
+            print(ready_res[graph_processes[str(process_to_handle_deadlock[0])]])
+            del ready_res[graph_processes[str(process_to_handle_deadlock[0])]]
+        for vertices in graph_processes:
+            if graph_processes[vertices] == str(process_to_handle_deadlock[0]):
+                List_resource_tobedeleted.append(vertices)
+        print(List_resource_tobedeleted)
+        while List_resource_tobedeleted:
+            del graph_processes[List_resource_tobedeleted[0]]
+            List_resource_tobedeleted.pop(0)
+        if graph_processes[str(process_to_handle_deadlock[0])] in graph_processes.keys():
+            print(graph_processes[str(process_to_handle_deadlock[0])])
+            del graph_processes[str(process_to_handle_deadlock[0])]
+        if str(process_to_handle_deadlock[0]) in assigned_list:
+            print(str(process_to_handle_deadlock[0]))
+            assigned_list.remove(str(process_to_handle_deadlock[0]))
+
+    finished_recovery[0] = 1
+
+
+for i in range(len(new)):
+    if data_in_dictionary[new[i]].Arrival_Time <= time and data_in_dictionary[new[i]].Check == 0:
+        priority = data_in_dictionary[new[i]].Priority
+        if priority not in ready.keys():
+            ready[priority] = deque()
+
+        ready[priority].append([new[i], data_in_dictionary[new[i]].calculate_total_burst()])
+        data_in_dictionary[new[i]].Check = 1
+        waiting_time.append([new[i], time - data_in_dictionary[new[i]].Arrival_Time])
+        turnaround_time.append([new[i], 0])
+        number_process += 1
+while True:
+    process_handle_deadlock = []
+    finish_recovery = []
+    finish_recovery.append(0)
+    for process_R in ready_res.keys():
+        if process_R not in assigned_list:
+            if ready_res[process_R][0][0] not in ready.keys():
+                ready[ready_res[process_R][0][0]] = deque()
+                ready[ready_res[process_R][0][0]].append([ready_res[process_R][0][1], ready_res[process_R][0][2]])
+            else:
+                ready[ready_res[process_R][0][0]].append([ready_res[process_R][0][1], ready_res[process_R][0][2]])
+            if len(ready_res[process_R]) > 1:
+                ready_res[process_R].popleft()
+            else:
+                ready_res.pop(process_R)
+                break
+    resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock)
+    if resultDeadLock:
+        print("HandleDeadLockHere1")
+        List_resource_tobedeleted = []
+        recovery(graph_processes, ready_res, assigned_list, process_handle_deadlock, finish_recovery)
+        if finish_recovery[0] == 1:
+            continue
     if len(ready) != 0:
         resource_busy = 0
         process = min(ready.keys())
         worker = ready[process].popleft()
-        #Here when a new process comes insert it to the graph
-        if worker[0] not in graph_processes.keys():
-            graph_processes[str(worker[0])] = []
-        testRequestFirst = re.search(r"R\[[0-9]*\]",str(worker[1][0][1][0]))
+        # Here when a new process comes insert it to the graph
+        testRequestFirst = re.search(r"R\[[0-9]*\]", str(worker[1][0][1][0]))
         testFreeFirst = re.search(r"F\[[0-9]*\]", str(worker[1][0][1][0]))
+        # ########################## start ################################
         if str(worker[1][0][1][0]).isdigit():
             if int(worker[1][0][1][0]) <= time_q:
                 start_time = time
@@ -59,7 +126,7 @@ while True:
                         for priority in ready.values():
                             if any(proc[0] == i[0] for proc in priority):
                                 i[1] += int(worker[1][0][1][0])
-                #left val
+                # left val
                 left_value = time_q - worker[1][0][1][0]
                 worker[1][0][1][0] = 0
                 worker[1][0][1].pop(0)
@@ -67,18 +134,36 @@ while True:
                     worker[1].pop(0)
                 else:
                     while True:
-                        testRequest = re.search(r"R\[[0-9]*\]",worker[1][0][1][0])
+                        testRequest = re.search(r"R\[[0-9]*\]", worker[1][0][1][0])
                         testFree = re.search(r"F\[[0-9]*\]", worker[1][0][1][0])
                         if testRequest:
-                            #make the Request
+                            # make the Request
                             if worker[1][0][1][0] not in assigned_list:
-                                graph_processes[str(worker[1][0][1][0])] = []
-                                graph_processes[str(worker[1][0][1][0])].append(str(worker[0]))
+                                graph_processes[str(worker[1][0][1][0])] = str(worker[0])
                                 assigned_list.append(str(worker[1][0][1][0]))
                                 worker[1][0][1].pop(0)
+                                resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock)
+                                if resultDeadLock:
+                                    print("HandleDeadLockHere1")
+                                    List_resource_tobedeleted = []
+                                    recovery(graph_processes, ready_res, assigned_list, process_handle_deadlock,
+                                             finish_recovery)
+                                    if finish_recovery[0] == 1:
+                                        continue
                             else:
-                                graph_processes[str(worker[0])].append(str(worker[1][0][1][0]))
-                                ready_res[process].append([worker[0],worker[1]])
+                                graph_processes[str(worker[0])] = str(worker[1][0][1][0])
+                                ready_res[worker[1][0][1][0]] = deque()
+                                ready_res[worker[1][0][1][0]].append([process, worker[0], worker[1]])
+                                resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock)
+                                if resultDeadLock:
+                                    print("HandleDeadLockHere1")
+                                    List_resource_tobedeleted = []
+                                    recovery(graph_processes, ready_res, assigned_list, process_handle_deadlock,
+                                             finish_recovery)
+                                    if finish_recovery[0] == 1:
+                                        continue
+                                if len(ready[process]) == 0:
+                                    ready.pop(process)
                                 resource_busy = 1
                                 break
 
@@ -90,26 +175,40 @@ while True:
                             elif left_value > 0 and len(worker[1][0][1]) > 0:
                                 if str(worker[1][0][1][0]).isdigit():
                                     if int(worker[1][0][1][0]) <= left_value:
-                                        time = time+worker[1][0][1][0]
-                                        left_value = left_value-worker[1][0][1][0]
+                                        time = time + worker[1][0][1][0]
+                                        left_value = left_value - worker[1][0][1][0]
                                         worker[1][0][1].pop(0)
                                         if len(worker[1][0][1]) == 0:
                                             worker[1].pop(0)
                                         if left_value == 0 and str(worker[1][0][1][0]).isdigit():
                                             break
                                     else:
-                                        time = time+left_value
-                                        worker[1][0][1][0] = worker[1][0][1][0]-left_value
+                                        time = time + left_value
+                                        worker[1][0][1][0] = worker[1][0][1][0] - left_value
                                         left_value = 0
                                         break
                         elif testFree:
-                            #make the free
-                            #to search whether the resources to be freed is already allocated or not
+                            # make the free
+                            # to search whether the resources to be freed is already allocated or not
                             Form_resource_to_be_freed = "R[" + worker[1][0][1][0][2] + "]"
                             if Form_resource_to_be_freed in assigned_list:
-                                #remove the resource from the graph
+                                # remove the resource from the graph
                                 del graph_processes[str(Form_resource_to_be_freed)]
                                 assigned_list.remove(Form_resource_to_be_freed)
+                                for vertex in graph_processes:
+                                    testProcess = re.search(r"^[0-9]*$", str(vertex))
+                                    if testProcess:
+                                        if graph_processes[vertex] not in assigned_list:
+                                            del graph_processes[vertex]
+                                            break
+                                resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock)
+                                if resultDeadLock:
+                                    print("HandleDeadLockHere1")
+                                    List_resource_tobedeleted = []
+                                    recovery(graph_processes, ready_res, assigned_list, process_handle_deadlock,
+                                             finish_recovery)
+                                    if finish_recovery[0] == 1:
+                                        continue
                             else:
                                 print("Free for a resource not exit!")
                                 exit(0)
@@ -122,14 +221,14 @@ while True:
                             elif left_value > 0 and len(worker[1][0][1]) > 0:
                                 if str(worker[1][0][1][0]).isdigit():
                                     if int(worker[1][0][1][0]) <= left_value:
-                                        time = time+worker[1][0][1][0]
-                                        left_value = left_value-worker[1][0][1][0]
+                                        time = time + worker[1][0][1][0]
+                                        left_value = left_value - worker[1][0][1][0]
                                         worker[1][0][1].pop(0)
                                         if left_value == 0 and str(worker[1][0][1][0]).isdigit():
                                             break
                                     else:
-                                        time = time+left_value
-                                        worker[1][0][1][0] = worker[1][0][1][0]-left_value
+                                        time = time + left_value
+                                        worker[1][0][1][0] = worker[1][0][1][0] - left_value
                                         left_value = 0
                                         break
                         else:
@@ -163,18 +262,32 @@ while True:
                 ready[process].append(worker)
                 gantt.append([start_time, worker[0], time])
 
-
+        ######################################################################################################################################################################################################
         elif testRequestFirst or testFreeFirst:
-            #make the Request
-            #here we call a function for an allocation for the allocation of the Graoh (For DeadLock Detection)
+            # make the Request
+            # here we call a function for an allocation for the allocation of the Graoh (For DeadLock Detection)
             if testRequestFirst:
                 if str(worker[1][0][1][0]) not in assigned_list:
-                    graph_processes[str(worker[1][0][1][0])] = []
-                    graph_processes[str(worker[1][0][1][0])].append(str(worker[0]))
+                    graph_processes[str(worker[1][0][1][0])] = str(worker[0])
                     assigned_list.append(str(worker[1][0][1][0]))
+                    resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock)
+                    if resultDeadLock:
+                        print("HandleDeadLockHere1")
+                        List_resource_tobedeleted = []
+                        recovery(graph_processes, ready_res, assigned_list, process_handle_deadlock, finish_recovery)
+                        if finish_recovery[0] == 1:
+                            continue
                 else:
-                    graph_processes[str(worker[0])].append(str(worker[1][0][1][0]))
-                    ready_res[process].append([worker[0], worker[1]])
+                    graph_processes[str(worker[0])] = (worker[1][0][1][0])
+                    ready_res[worker[1][0][1][0]] = deque()
+                    ready_res[worker[1][0][1][0]].append([process, worker[0], worker[1]])
+                    resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock)
+                    if resultDeadLock:
+                        print("HandleDeadLockHere1")
+                        List_resource_tobedeleted = []
+                        recovery(graph_processes, ready_res, assigned_list, process_handle_deadlock, finish_recovery)
+                        if finish_recovery[0] == 1:
+                            continue
                     continue
             elif testFreeFirst:
                 Form_resource_to_be_freed = "R[" + worker[1][0][1][0][2] + "]"
@@ -182,46 +295,100 @@ while True:
                     # remove the resource from the graph
                     del graph_processes[str(Form_resource_to_be_freed)]
                     assigned_list.remove(Form_resource_to_be_freed)
+                    for vertex in graph_processes:
+                        testProcess = re.search(r"^[0-9]*$", str(vertex))
+                        if testProcess:
+                            if graph_processes[vertex] not in assigned_list:
+                                del graph_processes[vertex]
+                                break
+                    resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock)
+                    if resultDeadLock:
+                        print("HandleDeadLockHere1")
+                        List_resource_tobedeleted = []
+                        recovery(graph_processes, ready_res, assigned_list, process_handle_deadlock, finish_recovery)
+                        if finish_recovery[0] == 1:
+                            continue
                 else:
                     print("Free for a resource not exit!")
                     exit(0)
             worker[1][0][1].pop(0)
-            start_time=time
+            start_time = time
             if len(worker[1][0][1]) == 0:
                 worker[1].pop(0)
                 break
             while True:
+                ########################################################################
                 left_value = time_q
-                testRequest = re.search(r"R\[[0-9]*\]",str(worker[1][0][1][0]))
+                testRequest = re.search(r"R\[[0-9]*\]", str(worker[1][0][1][0]))
                 testFree = re.search(r"F\[[0-9]*\]", str(worker[1][0][1][0]))
                 if testRequest:
-                    #make the Request
+                    # if the next value is Request a rosourc
+                    # make the Request
+                    if str(worker[1][0][1][0]) not in assigned_list:
+                        graph_processes[str(worker[1][0][1][0])] = str(worker[0])
+                        assigned_list.append(str(worker[1][0][1][0]))
+                        resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock)
+                        if resultDeadLock:
+                            print("HandleDeadLockHere1")
+                            List_resource_tobedeleted = []
+                            recovery(graph_processes, ready_res, assigned_list, process_handle_deadlock,
+                                     finish_recovery)
+                            if finish_recovery[0] == 1:
+                                continue
+                    else:
+                        graph_processes[str(worker[0])] = (worker[1][0][1][0])
+                        ready_res[worker[1][0][1][0]] = deque()
+                        ready_res[worker[1][0][1][0]].append([process, worker[0], worker[1]])
+                        resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock)
+                        if resultDeadLock:
+                            print("HandleDeadLockHere1")
+                            List_resource_tobedeleted = []
+                            recovery(graph_processes, ready_res, assigned_list, process_handle_deadlock,
+                                     finish_recovery)
+                            if finish_recovery[0] == 1:
+                                continue
+                        continue
                     worker[1][0][1].pop(0)
                     if left_value == 0 and str(worker[1][0][1][0]).isdigit():
                         break
                     elif left_value > 0 and len(worker[1][0][1]) > 0:
                         if str(worker[1][0][1][0]).isdigit():
                             if int(worker[1][0][1][0]) <= left_value:
-                                time = time+worker[1][0][1][0]
-                                left_value = left_value-worker[1][0][1][0]
+                                time = time + worker[1][0][1][0]
+                                left_value = left_value - worker[1][0][1][0]
                                 worker[1][0][1].pop(0)
                                 if left_value == 0 and str(worker[1][0][1][0]).isdigit():
                                     break
                             else:
-                                time = time+left_value
-                                worker[1][0][1][0] = worker[1][0][1][0]-left_value
+                                time = time + left_value
+                                worker[1][0][1][0] = worker[1][0][1][0] - left_value
                                 left_value = 0
                                 break
+                #########################################################################
                 elif testFree:
-                    #make the free
+                    # if the next value is free a rosource
+                    # make the free
+                    Form_resource_to_be_freed = "R[" + worker[1][0][1][0][2] + "]"
+                    if Form_resource_to_be_freed in assigned_list:
+                        # remove the resource from the graph
+                        del graph_processes[str(Form_resource_to_be_freed)]
+                        assigned_list.remove(Form_resource_to_be_freed)
+                        resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock)
+                        if resultDeadLock:
+                            print("HandleDeadLockHere1")
+                            List_resource_tobedeleted = []
+                            recovery(graph_processes, ready_res, assigned_list, process_handle_deadlock,
+                                     finish_recovery)
+                            if finish_recovery[0] == 1:
+                                continue
                     worker[1][0][1].pop(0)
                     if left_value == 0 and str(worker[1][0][1][0]).isdigit():
                         break
                     elif left_value > 0 and len(worker[1][0][1]) > 0:
                         if str(worker[1][0][1][0]).isdigit():
                             if int(worker[1][0][1][0]) <= left_value:
-                                time = time+worker[1][0][1][0]
-                                left_value = left_value-worker[1][0][1][0]
+                                time = time + worker[1][0][1][0]
+                                left_value = left_value - worker[1][0][1][0]
                                 worker[1][0][1].pop(0)
                                 for i in waiting_time:
                                     if i[0] != worker[0] and all(w[0] != i[0] for w in waiting):
@@ -231,8 +398,8 @@ while True:
                                 if left_value == 0 and str(worker[1][0][1][0]).isdigit():
                                     break
                             else:
-                                time = time+left_value
-                                worker[1][0][1][0] = worker[1][0][1][0]-left_value
+                                time = time + left_value
+                                worker[1][0][1][0] = worker[1][0][1][0] - left_value
                                 for i in waiting_time:
                                     if i[0] != worker[0] and all(w[0] != i[0] for w in waiting):
                                         for priority in ready.values():
@@ -240,14 +407,16 @@ while True:
                                                 i[1] += left_value
                                 left_value = 0
                                 break
+                ##########################################################################################
                 else:
+                    # if the next value is number check if the left value is grater then zero
                     if left_value == 0 and str(worker[1][0][1][0]).isdigit():
                         break
                     elif left_value > 0 and len(worker[1][0][1]) > 0:
                         if str(worker[1][0][1][0]).isdigit():
                             if int(worker[1][0][1][0]) <= left_value:
-                                time = time+worker[1][0][1][0]
-                                left_value = left_value-worker[1][0][1][0]
+                                time = time + worker[1][0][1][0]
+                                left_value = left_value - worker[1][0][1][0]
                                 for i in waiting_time:
                                     if i[0] != worker[0] and all(w[0] != i[0] for w in waiting):
                                         for priority in ready.values():
@@ -258,8 +427,8 @@ while True:
                                 if left_value == 0 and str(worker[1][0][1][0]).isdigit():
                                     break
                             else:
-                                time = time+left_value
-                                worker[1][0][1][0] = worker[1][0][1][0]-left_value
+                                time = time + left_value
+                                worker[1][0][1][0] = worker[1][0][1][0] - left_value
                                 for i in waiting_time:
                                     if i[0] != worker[0] and all(w[0] != i[0] for w in waiting):
                                         for priority in ready.values():
@@ -271,6 +440,17 @@ while True:
             gantt.append([start_time, worker[0], time])
             ready[process].append(worker)
 
+    for i in range(len(new)):
+        if data_in_dictionary[new[i]].Arrival_Time <= time and data_in_dictionary[new[i]].Check == 0:
+            priority = data_in_dictionary[new[i]].Priority
+            if priority not in ready.keys():
+                ready[priority] = deque()
+            ready[priority].append([new[i], data_in_dictionary[new[i]].calculate_total_burst()])
+            data_in_dictionary[new[i]].Check = 1
+            waiting_time.append([new[i], time - data_in_dictionary[new[i]].Arrival_Time])
+            turnaround_time.append([new[i], 0])
+            number_process += 1
+
     for i in waiting:
         if i[3] <= time:
             ready[i[2]] = deque()
@@ -280,7 +460,7 @@ while True:
             if len(ready) == 0:
                 time = time + 1
 
-    if len(waiting) == 0 and len(running) == 0 and len(ready) == 0:
+    if len(waiting) == 0 and len(running) == 0 and len(ready) == 0 and len(ready_res) == 0:
         break
 
 print(gantt)
