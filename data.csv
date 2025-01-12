@@ -1,4 +1,5 @@
 PID|Arrival Time|Priority|Sequence of CPU and IO bursts
-2|0|5|CPU{R[0],20} IO{30} CPU{20,30,R[2],20,F[2],10,F[0]}
-0|5|1|CPU{R[1],50,F[1]}
-1|5|1|CPU{R[2],20} IO{30} CPU{20,R[0],30,F[2],10,F[0]}
+0|0|1|CPU{R[0],10,R[2],F[2],R[1],10} IO{15} CPU{30,F[0],F[1]}
+1|5|2|CPU{R[1],10,F[1],R[0],10,F[0]} IO{10} CPU{20}
+2|10|3|CPU{R[2],15,F[2],R[1],10,F[1]} IO{15} CPU{20}
+3|15|2|CPU{R[1],10,R[0],10,F[0],F[1]} IO{10} CPU{10}
