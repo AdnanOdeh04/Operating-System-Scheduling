@@ -4,6 +4,7 @@ import test
 from collections import deque
 import re
 
+
 #This to read the data in a for of comma seperated file and store them in a chart
 data = pd.read_csv("./data.csv", delimiter="|")
 
@@ -17,6 +18,7 @@ for index, row in data.iterrows():
     # print(data_in_dictionary[row['PID']].calculate_total_burst())
 ################################All Parameters Needed##############################################################################
 
+    
 graph_processes = {}  # {"PID":[processes or resources]} all p or r in the list are connected directly to the process PID
 assigned_list = []
 ready = {}
@@ -24,7 +26,7 @@ waiting_res = {}
 running = []
 waiting = []
 time = 0  #Total Time
-time_q = 10
+time_q = 10 #Time Quantom
 gantt = []  #Store the Gantt Chart
 waiting_time = []  #Calculate the waiting time
 turnaround_time = []  #to calcualte the turnaround time
@@ -65,7 +67,7 @@ def calc_average_watingTime(waitingTime, number_process):
 # ################################################ dead Lock Detection part ##########################################################
 #Here we find whether there is a cycle or not in the graph
 def deadLockDetection(m, TargetedProcess, data_dict,
-                      Processes_deadlocked):
+                    Processes_deadlocked):
     list_processes_inDeadLock = {}
     for key in m.keys():
         dead = []
@@ -96,7 +98,7 @@ def deadLockDetection(m, TargetedProcess, data_dict,
 # #######################################################################################################################################
 # ################################################ dead Lock recovery part #############################################################
 def recovery(graph_processes, waiting_res, assigned_list, process_to_handle_deadlock, finished_recovery,
-             data_in_dictionary, terminated_process_list):
+            data_in_dictionary, terminated_process_list):
     process_in_deadLock = []
     #each terminate operation check whether there still exist deadlock to terminate another process
     while deadLockDetection(graph_processes, process_to_handle_deadlock, data_in_dictionary, process_in_deadLock):
@@ -187,15 +189,15 @@ while True:
     process_in_deadLock = []
     #To detect the deadlock
     resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock, data_in_dictionary,
-                                       process_in_deadLock)
+                                    process_in_deadLock)
     #if there is deadlock run recovery
     if resultDeadLock:
         print("--------")
         plt.annotate('DeadLocked Process', xy=(time, worker[0]), xytext=(0.2, 0.2),
-                     arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
+                    arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
         List_resource_tobedeleted = []
         recovery(graph_processes, waiting_res, assigned_list, process_handle_deadlock, finish_recovery,
-                 data_in_dictionary, terminated_processes_list)
+                data_in_dictionary, terminated_processes_list)
         if finish_recovery[0] == 1:
             print(
                 f"processes in the dead lock are: {process_in_deadLock[0]} and the terminated process is {process_handle_deadlock[0]}")
@@ -255,14 +257,14 @@ while True:
                                 process_in_deadLock = []
                                 #After making changes on the requests and assigned processes check deadlock
                                 resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock,
-                                                                   data_in_dictionary, process_in_deadLock)
+                                                                data_in_dictionary, process_in_deadLock)
                                 if resultDeadLock:
                                     plt.annotate('DeadLocked Process', xy=(time, worker[0]), xytext=(0.2, 0.2),
-                                                 arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
+                                                arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
                                     print("--------")
                                     List_resource_tobedeleted = []
                                     recovery(graph_processes, waiting_res, assigned_list, process_handle_deadlock,
-                                             finish_recovery, data_in_dictionary, terminated_processes_list)
+                                            finish_recovery, data_in_dictionary, terminated_processes_list)
                                     if finish_recovery[0] == 1:
                                         print(
                                             f"processes in the dead lock are: {process_in_deadLock[0]} and the terminated process is {process_handle_deadlock[0]}")
@@ -277,14 +279,14 @@ while True:
                                 process_in_deadLock = []
                                 #check deadlock after moving the process and recover it
                                 resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock,
-                                                                   data_in_dictionary, process_in_deadLock)
+                                                                data_in_dictionary, process_in_deadLock)
                                 if resultDeadLock:
                                     plt.annotate('DeadLocked Process', xy=(time, worker[0]), xytext=(0.2, 0.2),
-                                                 arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
+                                                arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
                                     print("--------")
                                     List_resource_tobedeleted = []
                                     recovery(graph_processes, waiting_res, assigned_list, process_handle_deadlock,
-                                             finish_recovery, data_in_dictionary, terminated_processes_list)
+                                            finish_recovery, data_in_dictionary, terminated_processes_list)
                                     if finish_recovery[0] == 1:
                                         worker[1] = []
                                         print(
@@ -348,14 +350,14 @@ while True:
                                             break
                                 process_in_deadLock = []
                                 resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock,
-                                                                   data_in_dictionary, process_in_deadLock)
+                                                                data_in_dictionary, process_in_deadLock)
                                 if resultDeadLock:
                                     plt.annotate('DeadLocked Process', xy=(time, worker[0]), xytext=(0.2, 0.2),
-                                                 arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
+                                                arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
                                     print("--------")
                                     List_resource_tobedeleted = []
                                     recovery(graph_processes, waiting_res, assigned_list, process_handle_deadlock,
-                                             finish_recovery, data_in_dictionary, terminated_processes_list)
+                                            finish_recovery, data_in_dictionary, terminated_processes_list)
                                     if finish_recovery[0] == 1:
                                         worker[1] = []
                                         print(
@@ -443,34 +445,35 @@ while True:
                     assigned_list.append(str(worker[1][0][1][0]))
                     process_in_deadLock = []
                     resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock, data_in_dictionary,
-                                                       process_in_deadLock)
+                                                    process_in_deadLock)
                     if resultDeadLock:
                         plt.annotate('DeadLocked Process', xy=(time, worker[0]), xytext=(0.2, 0.2),
-                                     arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
+                                    arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
                         print("--------")
                         List_resource_tobedeleted = []
                         recovery(graph_processes, waiting_res, assigned_list, process_handle_deadlock, finish_recovery,
-                                 data_in_dictionary, terminated_processes_list)
+                                data_in_dictionary, terminated_processes_list)
                         if finish_recovery[0] == 1:
                             print(
                                 f"processes in the dead lock are: {process_in_deadLock[0]} and the terminated process is {process_handle_deadlock[0]}")
                             process_in_deadLock = []
                             continue
                 else:
+                    resource_busy = 1
                     graph_processes[str(worker[0])] = (worker[1][0][1][0])
                     waiting_res[worker[1][0][1][0]] = deque()
                     waiting_res[worker[1][0][1][0]].append([process, worker[0], worker[1]])
                     process_in_deadLock = []
                     resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock, data_in_dictionary,
-                                                       process_in_deadLock)
+                                                    process_in_deadLock)
 
                     if resultDeadLock:
                         plt.annotate('DeadLocked Process', xy=(time, worker[0]), xytext=(0.2, 0.2),
-                                     arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
+                                    arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
                         print("--------")
                         List_resource_tobedeleted = []
                         recovery(graph_processes, waiting_res, assigned_list, process_handle_deadlock, finish_recovery,
-                                 data_in_dictionary, terminated_processes_list)
+                                data_in_dictionary, terminated_processes_list)
                         if finish_recovery[0] == 1:
                             print(
                                 f"processes in the dead lock are: {process_in_deadLock[0]} and the terminated process is {process_handle_deadlock[0]}")
@@ -494,14 +497,14 @@ while True:
                                 break
                     process_in_deadLock = []
                     resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock, data_in_dictionary,
-                                                       process_in_deadLock)
+                                                    process_in_deadLock)
                     if resultDeadLock:
                         plt.annotate('DeadLocked Process', xy=(time, worker[0]), xytext=(0.2, 0.2),
-                                     arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
+                                    arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
                         print("--------")
                         List_resource_tobedeleted = []
                         recovery(graph_processes, waiting_res, assigned_list, process_handle_deadlock, finish_recovery,
-                                 data_in_dictionary, terminated_processes_list)
+                                data_in_dictionary, terminated_processes_list)
                         if finish_recovery[0] == 1:
                             print(
                                 f"processes in the dead lock are: {process_in_deadLock[0]} and the terminated process is {process_handle_deadlock[0]}")
@@ -510,11 +513,13 @@ while True:
                 else:
                     print("Free for a resource not exit!")
                     exit(0)
-            worker[1][0][1].pop(0)
+                if resource_busy == 1:
+                    continue
+            worker[1][0][1].pop(0)  
             start_time = time
             if len(worker[1][0][1]) == 0:
                 worker[1].pop(0)
-                break
+                continue
             while True:
                 ########################################################################
                 if len(worker[1][0][1]) == 0:
@@ -530,33 +535,34 @@ while True:
                         assigned_list.append(str(worker[1][0][1][0]))
                         process_in_deadLock = []
                         resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock, data_in_dictionary,
-                                                           process_in_deadLock)
+                                                        process_in_deadLock)
                         if resultDeadLock:
                             plt.annotate('DeadLocked Process', xy=(time, worker[0]), xytext=(0.2, 0.2),
-                                         arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
+                                        arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
                             print("--------")
                             List_resource_tobedeleted = []
                             recovery(graph_processes, waiting_res, assigned_list, process_handle_deadlock,
-                                     finish_recovery, data_in_dictionary, terminated_processes_list)
+                                    finish_recovery, data_in_dictionary, terminated_processes_list)
                             if finish_recovery[0] == 1:
                                 print(
                                     f"processes in the dead lock are: {process_in_deadLock[0]} and the terminated process is {process_handle_deadlock[0]}")
                                 process_in_deadLock = []
                                 break
                     else:
+                        resource_busy = 1
                         graph_processes[str(worker[0])] = (worker[1][0][1][0])
                         waiting_res[worker[1][0][1][0]] = deque()
                         waiting_res[worker[1][0][1][0]].append([process, worker[0], worker[1]])
                         process_in_deadLock = []
                         resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock, data_in_dictionary,
-                                                           process_in_deadLock)
+                                                        process_in_deadLock)
                         if resultDeadLock:
                             plt.annotate('DeadLocked Process', xy=(time, worker[0]), xytext=(0.2, 0.2),
-                                         arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
+                                        arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
                             print("--------")
                             List_resource_tobedeleted = []
                             recovery(graph_processes, waiting_res, assigned_list, process_handle_deadlock,
-                                     finish_recovery, data_in_dictionary, terminated_processes_list)
+                                    finish_recovery, data_in_dictionary, terminated_processes_list)
                             if finish_recovery[0] == 1:
                                 worker = []
                                 print(
@@ -565,6 +571,9 @@ while True:
                                 break
                         break
                     worker[1][0][1].pop(0)
+                    if len(worker[1][0][1]) == 0:
+                        worker[1].pop(0)
+                        break
                     if left_value == 0 and str(worker[1][0][1][0]).isdigit():
                         break
                     elif left_value > 0 and len(worker[1][0][1]) > 0:
@@ -579,6 +588,9 @@ while True:
                                             if any(proc[0] == i[0] for proc in priority):
                                                 i[1] += int(worker[1][0][1][0])
                                 worker[1][0][1].pop(0)
+                                if len(worker[1][0][1]) == 0:
+                                    worker[1].pop(0)
+                                    break
                                 if left_value == 0 and str(worker[1][0][1][0]).isdigit():
                                     break
                             else:
@@ -603,20 +615,23 @@ while True:
                         assigned_list.remove(Form_resource_to_be_freed)
                         process_in_deadLock = []
                         resultDeadLock = deadLockDetection(graph_processes, process_handle_deadlock, data_in_dictionary,
-                                                           process_in_deadLock)
+                                                        process_in_deadLock)
                         if resultDeadLock:
                             print("--------")
                             plt.annotate('DeadLocked Process', xy=(time, worker[0]), xytext=(0.2, 0.2),
-                                         arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
+                                        arrowprops=dict(facecolor='yellow', ec='red', arrowstyle='->'))
                             List_resource_tobedeleted = []
                             recovery(graph_processes, waiting_res, assigned_list, process_handle_deadlock,
-                                     finish_recovery, data_in_dictionary, terminated_processes_list)
+                                    finish_recovery, data_in_dictionary, terminated_processes_list)
                             if finish_recovery[0] == 1:
                                 print(
                                     f"processes in the dead lock are: {process_in_deadLock[0]} and the terminated process is {process_handle_deadlock[0]}")
                                 process_in_deadLock = []
                                 break
                     worker[1][0][1].pop(0)
+                    if len(worker[1][0][1]) == 0:
+                        worker[1].pop(0)
+                        break
                     if left_value == 0 and str(worker[1][0][1][0]).isdigit():
                         break
                     elif left_value > 0 and len(worker[1][0][1]) > 0:
@@ -631,6 +646,9 @@ while True:
                                                 print(time)
                                                 i[1] += worker[1][0][1][0]
                                 worker[1][0][1].pop(0)
+                                if len(worker[1][0][1]) == 0:
+                                    worker[1].pop(0)
+                                    break
                                 if left_value == 0 and str(worker[1][0][1][0]).isdigit():
                                     break
                             else:
@@ -660,6 +678,9 @@ while True:
                                                 i[1] += worker[1][0][1][0]
 
                                 worker[1][0][1].pop(0)
+                                if len(worker[1][0][1]) == 0:
+                                    worker[1].pop(0)
+                                    break
                                 if len(worker[1][0][1]) > 0:
                                     if left_value == 0 and str(worker[1][0][1][0]).isdigit():
                                         break
@@ -675,7 +696,16 @@ while True:
                                                 i[1] += left_value
                                 left_value = 0
                                 break
-
+            if resource_busy == 1:
+                gantt.append([start_time, worker[0], time])
+                if len(ready[process]) == 0:
+                    ready.pop(process)
+                continue
+            if len(worker[1]) == 0:
+                if len(ready[process]) == 0:
+                    ready.pop(process)
+                gantt.append([start_time, worker[0], time])
+                continue
             if len(worker[1][0][1]) == 0:
                 worker[1].pop(0)
             if len(worker[1]) > 0:
